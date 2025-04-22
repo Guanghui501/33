@@ -79,31 +79,6 @@
         .download-btn:hover {
             background-color: #45a049;
         }
-        .toggle-lattice-btn {
-            background-color: #2196F3;
-        }
-        .toggle-lattice-btn:hover {
-            background-color: #0b7dda;
-        }
-        .toggle-labels-btn {
-            background-color: #9C27B0;
-        }
-        .toggle-labels-btn:hover {
-            background-color: #7B1FA2;
-        }
-        .controls {
-            margin-top: 10px;
-            text-align: center;
-        }
-        label {
-            margin-right: 10px;
-            font-size: 14px;
-        }
-        select {
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
     </style>
 </head>
 <body>
@@ -117,7 +92,9 @@
             <p><strong>爆轰速度 (V<sub>d</sub>):</strong> <span id="vd"></span> km/s</p>
             <p><strong>爆轰压力 (P<sub>d</sub>):</strong> <span id="pd"></span> GPa</p>
             
-
+            <div class="button-container">
+                <button id="download-cif" class="btn download-btn" disabled>下载CIF文件</button>
+            </div>
         </div>
 
         <div class="viewer-container">
@@ -132,10 +109,6 @@
     const id = urlParams.get('id');
     let currentCIF = '';
     let viewer = null;
-    let latticeVisible = false;
-    let labelsVisible = false;
-    let currentLabelSize = 0.8;
-    let currentLabelColor = 'blue';
 
     fetch('db.json')
         .then(response => response.json())
@@ -164,15 +137,17 @@
                 });
                 viewer.addModel(currentCIF, "cif");
                 
-                // 初始渲染原子和键
+                // 初始渲染原子、键、晶格和标签
                 renderAtomsAndBonds();
+                addUnitCell();
+                addAtomLabels();
                 
                 viewer.zoomTo();
                 viewer.center();
                 viewer.render();
 
-                // 启用所有控件
-                enableControls();
+                // 启用下载按钮
+                document.getElementById('download-cif').disabled = false;
 
                 const messageDiv = document.getElementById("viewer-message");
                 if (messageDiv) messageDiv.remove();
@@ -197,43 +172,39 @@
                 colorscheme: 'Jmol'
             } 
         });
-        
-        // 如果标签可见，添加标签
-        if (labelsVisible) {
-            addAtomLabels();
-        }
-        
-        // 如果晶格可见，添加晶格
-        if (latticeVisible) {
-            viewer.addUnitCell({
-                box: { color: 0x0000ff, radius: 0.1 },
-                a: { color: 0xff0000, radius: 0.1 },
-                b: { color: 0x00ff00, radius: 0.1 },
-                c: { color: 0x0000ff, radius: 0.1 }
-            });
-        }
-        
         viewer.render();
+    }
+
+    function addUnitCell() {
+        if (!viewer) return;
+        
+        viewer.addUnitCell({
+            box: { color: 0x0000ff, radius: 0.1 },
+            a: { color: 0xff0000, radius: 0.1 },
+            b: { color: 0x00ff00, radius: 0.1 },
+            c: { color: 0x0000ff, radius: 0.1 }
+        });
     }
 
     function addAtomLabels() {
         const atoms = viewer.getModel().selectedAtoms({});
         atoms.forEach(atom => {
+            // 在原子下方添加标签（Y轴方向偏移）
+            const position = {
+                x: atom.x,
+                y: atom.y - 0.5,
+                z: atom.z
+            };
+            
             viewer.addLabel(atom.elem, {
-                position: atom,
-                fontSize: currentLabelSize,
-                fontColor: currentLabelColor,
-                backgroundColor: 0xeeeeee,
+                position: position,
+                fontSize: 0.6,
+                fontColor: 'black',
+                backgroundColor: 0xffffff,
                 backgroundOpacity: 0.7,
                 inFront: true
             });
         });
-    }
-
-    function enableControls() {
-        document.getElementById('download-cif').disabled = false;
-        document.getElementById('toggle-lattice').disabled = false;
-        document.getElementById('toggle-labels').disabled = false;
     }
 
     // 下载CIF文件
@@ -244,35 +215,11 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = material_${id}.cif;
+        a.download = `material_${id}.cif`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-    });
-
-    // 显示晶格
-    document.getElementById('toggle-lattice').addEventListener('click', function() {
-        if (!viewer || latticeVisible) return;
-        
-        latticeVisible = true;
-        this.textContent = "晶格已显示";  // 不再切换隐藏
-        
-        viewer.removeAllModels();
-        viewer.addModel(currentCIF, "cif");
-        renderAtomsAndBonds();
-    });
-    
-    // 显示原子标签
-    document.getElementById('toggle-labels').addEventListener('click', function() {
-        if (!viewer || labelsVisible) return;
-        
-        labelsVisible = true;
-        this.textContent = "标签已显示";  // 不再切换隐藏
-        
-        viewer.removeAllModels();
-        viewer.addModel(currentCIF, "cif");
-        renderAtomsAndBonds();
     });
 
     function generateCIF(data) {
@@ -291,13 +238,13 @@
             const fx = x / cell[0][0];
             const fy = y / cell[1][1];
             const fz = z / cell[2][2];
-            cif += ${symbols[i]} ${fx.toFixed(6)} ${fy.toFixed(6)} ${fz.toFixed(6)}\n;
+            cif += `${symbols[i]} ${fx.toFixed(6)} ${fy.toFixed(6)} ${fz.toFixed(6)}\n`;
         }
         return cif;
     }
 
     function formatFormula(formula) {
-        return formula.replace(/(\D)(\d+)/g, (_, element, num) => ${element}<sub>${num}</sub>);
+        return formula.replace(/(\D)(\d+)/g, (_, element, num) => `${element}<sub>${num}</sub>`);
     }
     </script>
 </body>
