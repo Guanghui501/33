@@ -56,6 +56,54 @@
             color: #666;
             text-align: center;
         }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 16px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            margin: 2px;
+        }
+        .download-btn {
+            background-color: #4CAF50;
+        }
+        .download-btn:hover {
+            background-color: #45a049;
+        }
+        .toggle-lattice-btn {
+            background-color: #2196F3;
+        }
+        .toggle-lattice-btn:hover {
+            background-color: #0b7dda;
+        }
+        .toggle-labels-btn {
+            background-color: #9C27B0;
+        }
+        .toggle-labels-btn:hover {
+            background-color: #7B1FA2;
+        }
+        .controls {
+            margin-top: 10px;
+            text-align: center;
+        }
+        label {
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        select {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 <body>
@@ -68,6 +116,29 @@
             <p><strong>爆轰能量 (E<sub>d</sub>):</strong> <span id="ed"></span> kJ/g</p>
             <p><strong>爆轰速度 (V<sub>d</sub>):</strong> <span id="vd"></span> km/s</p>
             <p><strong>爆轰压力 (P<sub>d</sub>):</strong> <span id="pd"></span> GPa</p>
+            
+            <div class="button-container">
+                <button id="download-cif" class="btn download-btn" disabled>下载CIF文件</button>
+                <button id="toggle-lattice" class="btn toggle-lattice-btn" disabled>显示晶格</button>
+                <button id="toggle-labels" class="btn toggle-labels-btn" disabled>显示原子标签</button>
+            </div>
+            
+            <div class="controls">
+                <label for="label-size">标签大小:</label>
+                <select id="label-size" disabled>
+                    <option value="0.5">小</option>
+                    <option value="0.8" selected>中</option>
+                    <option value="1.2">大</option>
+                </select>
+                
+                <label for="label-color">标签颜色:</label>
+                <select id="label-color" disabled>
+                    <option value="black">黑色</option>
+                    <option value="red">红色</option>
+                    <option value="blue" selected>蓝色</option>
+                    <option value="green">绿色</option>
+                </select>
+            </div>
         </div>
 
         <div class="viewer-container">
@@ -80,6 +151,12 @@
     <script>
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
+    let currentCIF = '';
+    let viewer = null;
+    let latticeVisible = false;
+    let labelsVisible = false;
+    let currentLabelSize = 0.8;
+    let currentLabelColor = 'blue';
 
     fetch('db.json')
         .then(response => response.json())
@@ -101,16 +178,22 @@
             document.getElementById('pd').innerText = material.P_d?.toFixed(3) ?? 'N/A';
 
             try {
-                const cif = generateCIF(material);
-                const viewer = $3Dmol.createViewer(document.getElementById("viewer"), { 
+                currentCIF = generateCIF(material);
+                viewer = $3Dmol.createViewer(document.getElementById("viewer"), { 
                     backgroundColor: "white",
                     defaultZoom: 1.0
                 });
-                viewer.addModel(cif, "cif");
-                viewer.setStyle({}, { stick: {}, sphere: { scale: 0.3 } });
+                viewer.addModel(currentCIF, "cif");
+                
+                // 初始渲染原子和键
+                renderAtomsAndBonds();
+                
                 viewer.zoomTo();
                 viewer.center();
                 viewer.render();
+
+                // 启用所有控件
+                enableControls();
 
                 const messageDiv = document.getElementById("viewer-message");
                 if (messageDiv) messageDiv.remove();
@@ -124,6 +207,118 @@
             document.getElementById('formula').innerText = "加载材料数据失败。";
             document.getElementById('viewer-message').innerText = "无法获取结构数据。";
         });
+
+    function renderAtomsAndBonds() {
+        if (!viewer) return;
+        
+        viewer.setStyle({}, { 
+            stick: {}, 
+            sphere: { 
+                scale: 0.3,
+                colorscheme: 'Jmol'
+            } 
+        });
+        
+        // 如果标签可见，添加标签
+        if (labelsVisible) {
+            addAtomLabels();
+        }
+        
+        // 如果晶格可见，添加晶格
+        if (latticeVisible) {
+            viewer.addUnitCell({
+                box: { color: 0x0000ff, radius: 0.1 },
+                a: { color: 0xff0000, radius: 0.1 },
+                b: { color: 0x00ff00, radius: 0.1 },
+                c: { color: 0x0000ff, radius: 0.1 }
+            });
+        }
+        
+        viewer.render();
+    }
+
+    function addAtomLabels() {
+        const atoms = viewer.getModel().selectedAtoms({});
+        atoms.forEach(atom => {
+            viewer.addLabel(atom.elem, {
+                position: atom,
+                fontSize: currentLabelSize,
+                fontColor: currentLabelColor,
+                backgroundColor: 0xeeeeee,
+                backgroundOpacity: 0.7,
+                inFront: true
+            });
+        });
+    }
+
+    function enableControls() {
+        document.getElementById('download-cif').disabled = false;
+        document.getElementById('toggle-lattice').disabled = false;
+        document.getElementById('toggle-labels').disabled = false;
+        document.getElementById('label-size').disabled = false;
+        document.getElementById('label-color').disabled = false;
+    }
+
+    // 下载CIF文件
+    document.getElementById('download-cif').addEventListener('click', function() {
+        if (!currentCIF) return;
+        
+        const blob = new Blob([currentCIF], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `material_${id}.cif`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+
+    // 切换晶格显示
+    document.getElementById('toggle-lattice').addEventListener('click', function() {
+        if (!viewer) return;
+        
+        latticeVisible = !latticeVisible;
+        this.textContent = latticeVisible ? "隐藏晶格" : "显示晶格";
+        
+        // 重新渲染整个结构
+        viewer.removeAllModels();
+        viewer.addModel(currentCIF, "cif");
+        renderAtomsAndBonds();
+    });
+
+    // 切换原子标签显示
+    document.getElementById('toggle-labels').addEventListener('click', function() {
+        if (!viewer) return;
+        
+        labelsVisible = !labelsVisible;
+        this.textContent = labelsVisible ? "隐藏原子标签" : "显示原子标签";
+        
+        // 重新渲染整个结构
+        viewer.removeAllModels();
+        viewer.addModel(currentCIF, "cif");
+        renderAtomsAndBonds();
+    });
+
+    // 标签大小控制
+    document.getElementById('label-size').addEventListener('change', function() {
+        currentLabelSize = parseFloat(this.value);
+        if (labelsVisible) {
+            viewer.removeAllModels();
+            viewer.addModel(currentCIF, "cif");
+            renderAtomsAndBonds();
+        }
+    });
+
+    // 标签颜色控制
+    document.getElementById('label-color').addEventListener('change', function() {
+        currentLabelColor = this.value;
+        if (labelsVisible) {
+            viewer.removeAllModels();
+            viewer.addModel(currentCIF, "cif");
+            renderAtomsAndBonds();
+        }
+    });
 
     function generateCIF(data) {
         const { cell, symbols, positions } = data;
