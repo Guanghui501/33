@@ -53,73 +53,74 @@
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const id = urlParams.get('id');
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
 
-        fetch('db.json')
-            .then(response => response.json())
-            .then(data => {
-                const material = data[id];
-                if (!material) {
-                    document.getElementById('formula').innerText = "未找到材料数据。";
-                    document.getElementById('viewer-message').innerText = "没有结构数据。";
-                    return;
-                }
-
-                const formattedFormula = formatFormula(material.formula);
-                document.getElementById('formula').innerHTML = formattedFormula;
-                document.getElementById('energy').innerText = material.energy?.toFixed(3) ?? 'N/A';
-                document.getElementById('density').innerText = material.mass_density?.toFixed(3) ?? 'N/A';
-                document.getElementById('n_concentration').innerText = material.N_concentration?.toFixed(3) ?? 'N/A';
-                document.getElementById('ed').innerText = material.E_d?.toFixed(3) ?? 'N/A';
-                document.getElementById('vd').innerText = material.V_d?.toFixed(3) ?? 'N/A';
-                document.getElementById('pd').innerText = material.P_d?.toFixed(3) ?? 'N/A';
-
-                try {
-                    const cif = generateCIF(material);
-                    const viewer = $3Dmol.createViewer("viewer", { backgroundColor: "white" });
-                    viewer.addModel(cif, "cif");
-                    viewer.setStyle({}, { stick: {}, sphere: { scale: 0.3 } });
-                    viewer.zoomTo();
-                    viewer.render();
-
-                    const messageDiv = document.getElementById("viewer-message");
-                    if (messageDiv) messageDiv.remove();
-                } catch (err) {
-                    console.error("3D结构渲染失败:", err);
-                    document.getElementById('viewer-message').innerText = "加载3D结构失败。";
-                }
-            })
-            .catch(err => {
-                console.error("数据获取失败:", err);
-                document.getElementById('formula').innerText = "加载材料数据失败。";
-                document.getElementById('viewer-message').innerText = "无法获取结构数据。";
-            });
-
-        function generateCIF(data) {
-            const { cell, symbols, positions } = data;
-            let cif = "data_generated\n";
-            cif += "_cell_length_a " + cell[0][0].toFixed(6) + "\n";
-            cif += "_cell_length_b " + cell[1][1].toFixed(6) + "\n";
-            cif += "_cell_length_c " + cell[2][2].toFixed(6) + "\n";
-            cif += "_cell_angle_alpha 90\n";
-            cif += "_cell_angle_beta 90\n";
-            cif += "_cell_angle_gamma 90\n";
-            cif += "loop_\n_atom_site_label\n_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n";
-
-            for (let i = 0; i < symbols.length; i++) {
-                const [x, y, z] = positions[i];
-                const fx = x / cell[0][0];
-                const fy = y / cell[1][1];
-                const fz = z / cell[2][2];
-                cif += `${symbols[i]} ${fx.toFixed(6)} ${fy.toFixed(6)} ${fz.toFixed(6)}\n`;
+    fetch('db.json')
+        .then(response => response.json())
+        .then(data => {
+            const material = data[id];
+            if (!material) {
+                document.getElementById('formula').innerText = "未找到材料数据。";
+                document.getElementById('viewer-message').innerText = "没有结构数据。";
+                return;
             }
-            return cif;
-        }
 
-        function formatFormula(formula) {
-            return formula.replace(/(\D)(\d+)/g, (_, element, num) => `${element}<sub>${num}</sub>`);
+            const formattedFormula = formatFormula(material.formula);
+            document.getElementById('formula').innerHTML = formattedFormula;
+            document.getElementById('energy').innerText = material.energy?.toFixed(3) ?? 'N/A';
+            document.getElementById('density').innerText = material.mass_density?.toFixed(3) ?? 'N/A';
+            document.getElementById('n_concentration').innerText = material.N_concentration?.toFixed(3) ?? 'N/A';
+            document.getElementById('ed').innerText = material.E_d?.toFixed(3) ?? 'N/A';
+            document.getElementById('vd').innerText = material.V_d?.toFixed(3) ?? 'N/A';
+            document.getElementById('pd').innerText = material.P_d?.toFixed(3) ?? 'N/A';
+
+            try {
+                const cif = generateCIF(material);
+                const viewer = $3Dmol.createViewer("viewer", { backgroundColor: "white" });
+                viewer.addModel(cif, "cif");
+                viewer.setStyle({}, { stick: {}, sphere: { scale: 0.3 } });
+                viewer.zoomTo();
+                viewer.center();  // 添加这行代码来确保模型居中
+                viewer.render();
+
+                const messageDiv = document.getElementById("viewer-message");
+                if (messageDiv) messageDiv.remove();
+            } catch (err) {
+                console.error("3D结构渲染失败:", err);
+                document.getElementById('viewer-message').innerText = "加载3D结构失败。";
+            }
+        })
+        .catch(err => {
+            console.error("数据获取失败:", err);
+            document.getElementById('formula').innerText = "加载材料数据失败。";
+            document.getElementById('viewer-message').innerText = "无法获取结构数据。";
+        });
+
+    function generateCIF(data) {
+        const { cell, symbols, positions } = data;
+        let cif = "data_generated\n";
+        cif += "_cell_length_a " + cell[0][0].toFixed(6) + "\n";
+        cif += "_cell_length_b " + cell[1][1].toFixed(6) + "\n";
+        cif += "_cell_length_c " + cell[2][2].toFixed(6) + "\n";
+        cif += "_cell_angle_alpha 90\n";
+        cif += "_cell_angle_beta 90\n";
+        cif += "_cell_angle_gamma 90\n";
+        cif += "loop_\n_atom_site_label\n_atom_site_fract_x\n_atom_site_fract_y\n_atom_site_fract_z\n";
+
+        for (let i = 0; i < symbols.length; i++) {
+            const [x, y, z] = positions[i];
+            const fx = x / cell[0][0];
+            const fy = y / cell[1][1];
+            const fz = z / cell[2][2];
+            cif += `${symbols[i]} ${fx.toFixed(6)} ${fy.toFixed(6)} ${fz.toFixed(6)}\n`;
         }
-    </script>
+        return cif;
+    }
+
+    function formatFormula(formula) {
+        return formula.replace(/(\D)(\d+)/g, (_, element, num) => `${element}<sub>${num}</sub>`);
+    }
+</script>
 </body>
 </html>
