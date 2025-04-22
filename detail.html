@@ -6,18 +6,17 @@
     <title>材料详情 - Nemesis</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.1/3Dmol-min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;  /* 水平居中 */
+            align-items: center;      /* 垂直居中 */
         }
         #viewer {
             width: 600px;
             height: 600px;
-            margin: auto;
             border: 1px solid #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .info {
             max-width: 600px;
