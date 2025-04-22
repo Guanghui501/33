@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Material Detail - Nemesis</title>
+    <title>材料详情 - Nemesis</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.1/3Dmol-min.js"></script>
     <style>
         body {
@@ -40,17 +40,17 @@
 </head>
 <body>
     <div class="info">
-        <h2 id="formula">Loading...</h2>
-        <p><strong>Energy:</strong> <span id="energy"></span> eV</p>
-        <p><strong>Mass Density:</strong> <span id="density"></span> g/cm³</p>
-        <p><strong>N Concentration:</strong> <span id="n_concentration"></span>%</p>
-        <p><strong>Detonation Energy (E<sub>d</sub>):</strong> <span id="ed"></span> kJ/g</p>
-        <p><strong>Detonation Velocity (V<sub>d</sub>):</strong> <span id="vd"></span> km/s</p>
-        <p><strong>Detonation Pressure (P<sub>d</sub>):</strong> <span id="pd"></span> GPa</p>
+        <h2 id="formula">加载中...</h2>
+        <p><strong>能量:</strong> <span id="energy"></span> eV</p>
+        <p><strong>质量密度:</strong> <span id="density"></span> g/cm³</p>
+        <p><strong>氮浓度:</strong> <span id="n_concentration"></span>%</p>
+        <p><strong>爆轰能量 (E<sub>d</sub>):</strong> <span id="ed"></span> kJ/g</p>
+        <p><strong>爆轰速度 (V<sub>d</sub>):</strong> <span id="vd"></span> km/s</p>
+        <p><strong>爆轰压力 (P<sub>d</sub>):</strong> <span id="pd"></span> GPa</p>
     </div>
 
     <div id="viewer">
-        <div id="viewer-message">Loading structure...</div>
+        <div id="viewer-message">加载结构中...</div>
     </div>
 
     <script>
@@ -62,8 +62,8 @@
             .then(data => {
                 const material = data[id];
                 if (!material) {
-                    document.getElementById('formula').innerText = "Material not found.";
-                    document.getElementById('viewer-message').innerText = "No structure data.";
+                    document.getElementById('formula').innerText = "未找到材料数据。";
+                    document.getElementById('viewer-message').innerText = "没有结构数据。";
                     return;
                 }
 
@@ -78,37 +78,23 @@
 
                 try {
                     const cif = generateCIF(material);
-                    const viewer = $3Dmol.createViewer("viewer", { 
-                        backgroundColor: "white",
-                        width: 600, // Make sure the viewer size is properly set
-                        height: 600
-                    });
+                    const viewer = $3Dmol.createViewer("viewer", { backgroundColor: "white" });
                     viewer.addModel(cif, "cif");
                     viewer.setStyle({}, { stick: {}, sphere: { scale: 0.3 } });
-
-                    // Show lattice box
-                    viewer.setStyle({}, {
-                        box: {
-                            color: 'gray', // Color of the lattice box
-                            lineWidth: 2,
-                            opacity: 0.5
-                        }
-                    });
-
                     viewer.zoomTo();
                     viewer.render();
 
                     const messageDiv = document.getElementById("viewer-message");
                     if (messageDiv) messageDiv.remove();
                 } catch (err) {
-                    console.error("3D structure rendering failed:", err);
-                    document.getElementById('viewer-message').innerText = "Failed to load 3D structure.";
+                    console.error("3D结构渲染失败:", err);
+                    document.getElementById('viewer-message').innerText = "加载3D结构失败。";
                 }
             })
             .catch(err => {
-                console.error("Data fetch error:", err);
-                document.getElementById('formula').innerText = "Failed to load material data.";
-                document.getElementById('viewer-message').innerText = "Failed to fetch structure.";
+                console.error("数据获取失败:", err);
+                document.getElementById('formula').innerText = "加载材料数据失败。";
+                document.getElementById('viewer-message').innerText = "无法获取结构数据。";
             });
 
         function generateCIF(data) {
